@@ -5,8 +5,6 @@ import "core:fmt"
 import "core:os"
 import "core:strings"
 
-import lc3 "vendor/liblc3"
-
 MAX_GAME_STEPS :: 10_000
 
 Team :: enum {
@@ -154,119 +152,155 @@ game_tick_cheese :: proc(game: ^Game) {
 game_destroy :: proc(game: ^Game){
 	for team in game.teams {
 		for &mouse in team.mice {
-			lc3.destroy(&mouse.vm)
+			mouse_destroy(&mouse)
 		}
 		delete(team.mice)
 	}
 
 	delete(game.turns)
 	arena_destroy(&game.arena)
+	game^ = {}
+}
+
+@(private="file")
+game_map_error :: proc(line: int, message: string) -> bool {
+	if line > 0 {
+		fmt.eprintf("Map line %d: %s\n", line, message)
+	} else {
+		fmt.eprintf("Invalid map: %s\n", message)
+	}
+	return false
 }
 
 game_load_map :: proc(game: ^Game, file_path: string) -> bool {
 	data, err := os.read_entire_file_from_path(file_path, context.allocator)
-	if err != nil {
-		return false
-	}
-	defer delete(data, context.allocator)
+	if err != nil { return false }
+	defer delete(data)
 
+	has_symmetry := false
 	has_altar := false
+	line_number := 0
 	iterator := string(data)
-	for line in strings.split_lines_iterator(&iterator) {
+	for raw_line in strings.split_lines_iterator(&iterator) {
+		line_number += 1
+		line := raw_line
+		if comment := strings.index_byte(line, '#'); comment >= 0 {
+			line = line[:comment]
+		}
 		fields := strings.fields(line)
 		defer delete(fields)
-
 		if len(fields) == 0 { continue }
-		if len(fields) < 2 {
-			return false
+
+		expected := 2
+		if fields[0] == "CHEESE" { expected = 3 }
+		if len(fields) != expected {
+			return game_map_error(line_number, "wrong number of arguments")
 		}
 
-		switch (fields[0]) {
+		switch fields[0] {
 		case "SYMMETRY":
-			if (fields[1] == "HORIZONTAL") {
-				game.arena.symmetry = .Horizontal
-			} else if (fields[1] == "VERTICAL") {
-				game.arena.symmetry = .Vertical
-			} else {
-				// TODO: Return Better Error
-				return false
+			if has_symmetry {
+				return game_map_error(line_number, "duplicate SYMMETRY declaration")
 			}
+			switch fields[1] {
+			case "HORIZONTAL": game.arena.symmetry = .Horizontal
+			case "VERTICAL": game.arena.symmetry = .Vertical
+			case: return game_map_error(line_number, "expected HORIZONTAL or VERTICAL")
+			}
+			has_symmetry = true
 
 		case "ALTAR":
-			if has_altar { return false }
-			altar_coord, altar_coord_ok := parse_coordinate(fields[1])
-			if !altar_coord_ok {return false}
-
-			if altar_coord.y >= ARENA_HEIGHT - 1 || altar_coord.x >= ARENA_WIDTH - 1{
-				return false
+			if has_altar { return game_map_error(line_number, "only one source altar is allowed") }
+			position, ok := parse_coordinate(fields[1])
+			if !ok || position.x >= ARENA_WIDTH-1 || position.y >= ARENA_HEIGHT-1 {
+				return game_map_error(line_number, "altar must fit a 2x2 square inside the map")
 			}
-			
-			altar_coords := [4]int{
-				altar_coord.y * ARENA_WIDTH + altar_coord.x,
-				(altar_coord.y + 1) * ARENA_WIDTH + altar_coord.x,
-				altar_coord.y * ARENA_WIDTH + (altar_coord.x + 1),
-				(altar_coord.y + 1) * ARENA_WIDTH + (altar_coord.x + 1),
-			}
-
-			for coord in altar_coords {
-				if game.arena.tiles[coord] != .Floor {
-					return false
+			for y in position.y..<position.y+2 {
+				for x in position.x..<position.x+2 {
+					index := y * ARENA_WIDTH + x
+					if game.arena.tiles[index] != .Floor {
+						return game_map_error(line_number, "altar overlaps terrain")
+					}
+					game.arena.tiles[index] = .Altar_Team_1
 				}
-
-				game.arena.tiles[coord] = .Altar_Team_1
 			}
 			has_altar = true
 
 		case "WALL":
-			wall_coord, wall_coord_ok := parse_coordinate(fields[1])
-			if !wall_coord_ok { return false }
-			
-			arena_coord := wall_coord.y * ARENA_WIDTH + wall_coord.x
-			if game.arena.tiles[arena_coord] != .Floor {
-				return false
+			position, ok := parse_coordinate(fields[1])
+			if !ok { return game_map_error(line_number, "invalid wall coordinate") }
+			index := position.y * ARENA_WIDTH + position.x
+			if game.arena.tiles[index] != .Floor {
+				return game_map_error(line_number, "wall overlaps terrain")
 			}
-
-			game.arena.tiles[arena_coord] = .Wall
+			game.arena.tiles[index] = .Wall
 
 		case "MOUSE":
-			mouse_coord, mouse_coord_ok := parse_coordinate(fields[1])
-			if !mouse_coord_ok { return false }
-
-			mouse: Mouse
-			mouse.id = game_allocate_mouse_id(game)
-			mouse.pos = mouse_coord
-			mouse.team = .One
-
+			position, ok := parse_coordinate(fields[1])
+			if !ok { return game_map_error(line_number, "invalid mouse coordinate") }
+			if len(game.teams[.One].mice) >= ARENA_WIDTH * ARENA_HEIGHT / 2 {
+				return game_map_error(line_number, "too many source mice")
+			}
+			mouse := Mouse{
+				id = game_allocate_mouse_id(game),
+				pos = position,
+				team = .One,
+			}
 			append(&game.teams[.One].mice, mouse)
 
 		case "CHEESE":
-			if len(fields) != 3 { return false }
-			cheese_coords, cheese_coord_ok := parse_coordinate(fields[1])
-			if !cheese_coord_ok { return false; }
-
-			cheese_spawn_timer, cheese_spawn_timer_ok := strconv.parse_int(fields[2])
-			if !cheese_spawn_timer_ok || cheese_spawn_timer < 0 { return false; }
-
-			for spawner in game.arena.cheese_spawners {
-				if spawner.pos == cheese_coords { return false }
+			position, ok := parse_coordinate(fields[1])
+			if !ok { return game_map_error(line_number, "invalid cheese coordinate") }
+			delay, delay_ok := strconv.parse_int(fields[2])
+			if !delay_ok || delay < 0 {
+				return game_map_error(line_number, "cheese delay must be a nonnegative integer")
 			}
-
+			for spawner in game.arena.cheese_spawners {
+				if spawner.pos == position {
+					return game_map_error(line_number, "duplicate cheese spawner")
+				}
+			}
 			append(&game.arena.cheese_spawners, Cheese_Spawn{
-				pos = cheese_coords,
-				delay = cheese_spawn_timer,
-				present = cheese_spawn_timer == 0,
+				pos = position,
+				delay = delay,
+				present = delay == 0,
 			})
 
 		case:
-			return false
+			return game_map_error(line_number, "unknown map keyword")
 		}
-
 	}
 
-	if !has_altar { return false }
+	if !has_symmetry { return game_map_error(0, "missing SYMMETRY") }
+	if !has_altar { return game_map_error(0, "missing ALTAR") }
+	if len(game.teams[.One].mice) == 0 { return game_map_error(0, "missing MOUSE") }
+
+	for tile, index in game.arena.tiles {
+		if tile == .Floor { continue }
+		position := Coordinate{index % ARENA_WIDTH, index / ARENA_WIDTH}
+		if !coordinate_in_source_half(position, game.arena.symmetry) {
+			return game_map_error(0, "terrain and the full altar must be in the source half")
+		}
+	}
+
+	occupied: [ARENA_WIDTH * ARENA_HEIGHT]bool
+	for &mouse in game.teams[.One].mice {
+		index := mouse.pos.y * ARENA_WIDTH + mouse.pos.x
+		if !coordinate_in_source_half(mouse.pos, game.arena.symmetry) ||
+		   game.arena.tiles[index] != .Floor || occupied[index] {
+			return game_map_error(0, "mice must occupy distinct floor cells in the source half")
+		}
+		occupied[index] = true
+	}
+	for spawner in game.arena.cheese_spawners {
+		index := spawner.pos.y * ARENA_WIDTH + spawner.pos.x
+		if !coordinate_in_source_half(spawner.pos, game.arena.symmetry) ||
+		   game.arena.tiles[index] != .Floor {
+			return game_map_error(0, "cheese spawners must occupy floor cells in the source half")
+		}
+	}
 
 	game_reflect(game)
-
 	return true
 }
 

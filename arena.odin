@@ -43,6 +43,12 @@ coordinate_in_bounds :: proc(position: Coordinate) -> bool {
 	       position.y >= 0 && position.y < ARENA_HEIGHT
 }
 
+coordinate_in_source_half :: proc(position: Coordinate, symmetry: Symmetry) -> bool {
+	if !coordinate_in_bounds(position) { return false }
+	if symmetry == .Vertical { return position.x < ARENA_WIDTH / 2 }
+	return position.y < ARENA_HEIGHT / 2
+}
+
 arena_has_cheese :: proc(arena: ^Arena, position: Coordinate) -> bool {
 	if !coordinate_in_bounds(position) { return false }
 	if arena.dropped_cheese[position.y * ARENA_WIDTH + position.x] > 0 {
