@@ -1,3 +1,3 @@
 [submodule "vendor/liblc3"]
 	path = vendor/liblc3
-	url = https://codeberg.org/rjawaji/liblc3
+	url = https://github.com/rjawaji1/liblc3.git
