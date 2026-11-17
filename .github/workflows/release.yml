@@ -31,11 +31,7 @@ jobs:
             target: windows_amd64
             out: lc3bc.exe
             asset: lc3bc-x86_64-windows.exe
-          # Windows ARM64 is cross-compiled; GitHub's Odin builds are x86_64-only.
-          - os: windows-latest
-            target: windows_arm64
-            out: lc3bc.exe
-            asset: lc3bc-aarch64-windows.exe
+          # Odin has no windows_arm64 target.
           - os: macos-latest
             target: darwin_arm64
             out: lc3bc
