@@ -1,0 +1,5 @@
+name = "lc3bc2026-replay"
+compatibility_date = "2026-11-17"
+
+[assets]
+directory = "."
