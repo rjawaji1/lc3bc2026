@@ -19,10 +19,17 @@ Team_State :: struct {
 	score: uint,
 }
 
+Mouse_Turn :: struct {
+	mouse_id: Mouse_ID,
+	action: Mouse_Action,
+	fault: Mouse_Error,
+}
+
 Game :: struct {
 	arena: Arena,
 	teams: [Team]Team_State,
 	last_mouse_id: Mouse_ID,
+	turns: [dynamic]Mouse_Turn,
 }
 
 @(private="file")
@@ -89,27 +96,10 @@ game_init :: proc(
 }
 
 game_step :: proc(game: ^Game){
-	// Reset Mice
-	for team in game.teams {
-		for &mouse in team.mice {
-			mouse_reset(&mouse)
-		}
-	}
-
-	// Step Through
-	for team in game.teams {
-		for &mouse in team.mice {
-			mouse_sync_map_observations(&mouse, &game.arena)
-			action, run_err := mouse_run(&mouse)
-			if run_err != .None {
-				// Kill Mouse
-			}
-		}
-	}
-
-	// Process Mice Actions
-	
-	// Collect Cheese
+	game_collect_actions(game)
+	game_resolve_faults(game)
+	game_resolve_movement(game)
+	game_deposit_cheese(game)
 
 	// Count Down Cheese timers
 	for &cheese_spawner in game.arena.cheese_spawners {
@@ -135,6 +125,7 @@ game_destroy :: proc(game: ^Game){
 		delete(team.mice)
 	}
 
+	delete(game.turns)
 	arena_destroy(&game.arena)
 }
 

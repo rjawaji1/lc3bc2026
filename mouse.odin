@@ -60,11 +60,17 @@ Mouse_Error :: enum {
 	Reserved_Instruction,
 }
 
+Mouse_State :: enum {
+	Alive,
+	Dead,
+}
+
 Mouse_ID :: distinct u16
 INVALID_MOUSE_ID :: Mouse_ID(0)
 
 Mouse :: struct {
 	id:         Mouse_ID,
+	state:      Mouse_State,
 	pos:        Coordinate,
 	facing:     Direction,
 	team:       Team,
@@ -169,18 +175,15 @@ mouse_sync_map_observations :: proc(mouse: ^Mouse, arena: ^Arena) {
 				switch tile {
 				case .Floor:
 					observed = .Floor
-					for spawner in arena.cheese_spawners {
-						if spawner.pos == position && spawner.present {
-							observed = .Cheese
-							break
-						}
-					}
 				case .Wall:
 					observed = .Wall
 				case .Altar_Team_1, .Altar_Team_2:
 					friendly := (tile == .Altar_Team_1 && mouse.team == .One) ||
 					            (tile == .Altar_Team_2 && mouse.team == .Two)
 					observed = .Friendly_Altar if friendly else .Enemy_Altar
+				}
+				if tile != .Wall && arena_has_cheese(arena, position) {
+					observed = .Cheese
 				}
 			}
 

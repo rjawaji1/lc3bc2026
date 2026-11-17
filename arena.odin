@@ -29,12 +29,40 @@ Cheese_Spawn :: struct {
 Arena :: struct {
 	tiles:    [ARENA_HEIGHT * ARENA_WIDTH]Tile,
 	cheese_spawners: [dynamic]Cheese_Spawn,
+	dropped_cheese: [ARENA_HEIGHT * ARENA_WIDTH]uint,
 	symmetry: Symmetry,
 }
 
 Coordinate :: struct {
 	x: int,
 	y: int,
+}
+
+coordinate_in_bounds :: proc(position: Coordinate) -> bool {
+	return position.x >= 0 && position.x < ARENA_WIDTH &&
+	       position.y >= 0 && position.y < ARENA_HEIGHT
+}
+
+arena_has_cheese :: proc(arena: ^Arena, position: Coordinate) -> bool {
+	if !coordinate_in_bounds(position) { return false }
+	if arena.dropped_cheese[position.y * ARENA_WIDTH + position.x] > 0 {
+		return true
+	}
+	for spawner in arena.cheese_spawners {
+		if spawner.pos == position && spawner.present { return true }
+	}
+	return false
+}
+
+arena_drop_cheese :: proc(arena: ^Arena, position: Coordinate) {
+	if !coordinate_in_bounds(position) { return }
+	for &spawner in arena.cheese_spawners {
+		if spawner.pos == position && !spawner.present {
+			spawner.present = true
+			return
+		}
+	}
+	arena.dropped_cheese[position.y * ARENA_WIDTH + position.x] += 1
 }
 
 arena_destroy :: proc(arena: ^Arena){
