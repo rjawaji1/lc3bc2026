@@ -1,0 +1,215 @@
+.editor-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.editor-grid {
+	display: grid;
+	grid-template-columns: 24px repeat(16, minmax(0, 1fr));
+	gap: 2px;
+	padding: 12px;
+	background: var(--bg-deep);
+	user-select: none;
+	touch-action: none;
+}
+
+.grid-axis {
+	display: grid;
+	place-items: center;
+	min-height: 20px;
+	color: var(--dim);
+	font-family: var(--mono);
+	font-size: 10px;
+}
+
+.editor-cell {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1px;
+	min-width: 0;
+	aspect-ratio: 1;
+	padding: 0;
+	border: 1px solid transparent;
+	background: #242424;
+	font-family: var(--mono);
+	font-size: clamp(8px, 1.2vw, 13px);
+	line-height: 1.1;
+	font-weight: 500;
+}
+
+.editor-cell.alternate {
+	background: #272727;
+}
+
+.editor-cell.wall {
+	background: #4a4a4a;
+	box-shadow: inset 0 3px #565656;
+}
+
+.editor-cell.altar-one {
+	background: var(--blue-dark);
+	color: var(--blue);
+}
+
+.editor-cell.altar-two {
+	background: var(--red-dark);
+	color: var(--red);
+}
+
+.editor-cell.mouse-one {
+	color: var(--blue);
+}
+
+.editor-cell.mouse-two {
+	color: var(--red);
+}
+
+.cell-cheese {
+	color: var(--gold);
+	font-size: 0.85em;
+}
+
+.editor-cell.spawner {
+	border: 1px dashed #9c8b5a;
+}
+
+.editor-cell:disabled {
+	opacity: 1;
+	cursor: default;
+}
+
+.editor-cell.source-edge-x {
+	border-right: 2px solid var(--blue);
+}
+
+.editor-cell.source-edge-y {
+	border-bottom: 2px solid var(--blue);
+}
+
+.editor-cell:hover:not(:disabled) {
+	outline: 1px solid var(--green);
+	outline-offset: -1px;
+	background: #303b31;
+}
+
+.editor-cell:focus-visible {
+	z-index: 1;
+	outline-offset: 0;
+}
+
+.editor-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px;
+	padding: 12px 16px;
+	border-top: 1px solid var(--border);
+	font-size: 11px;
+}
+
+.editor-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+	padding: 14px 16px;
+}
+
+.editor-fields label {
+	font-size: 12px;
+}
+
+.editor-fields input,
+.editor-fields select {
+	width: 100%;
+	min-width: 0;
+	padding: 8px;
+	border: 1px solid var(--border-strong);
+	background-color: var(--bg-deep);
+	color: var(--text);
+	font-family: var(--mono);
+	font-size: 12px;
+}
+
+.editor-fields select {
+	padding-right: 26px;
+}
+
+.editor-help {
+	color: var(--muted);
+	font-size: 11px;
+	line-height: 1.6;
+}
+
+.tool-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.tool-grid button {
+	padding: 10px 6px;
+}
+
+.tool-grid button[aria-pressed='true'] {
+	border-color: var(--green);
+	background: var(--green-dark);
+	color: var(--green-bright);
+}
+
+#map-validation ul {
+	margin: 0;
+	padding-left: 18px;
+	color: #efb2b2;
+}
+
+#map-validation.valid {
+	color: var(--green-bright);
+}
+
+.map-output {
+	margin-top: 20px;
+}
+
+#map-source {
+	display: block;
+	width: 100%;
+	min-height: 200px;
+	padding: 16px;
+	border: 0;
+	border-radius: 0;
+	background: var(--bg-deep);
+	color: var(--muted);
+	font-family: var(--mono);
+	font-size: 12px;
+	line-height: 1.6;
+	resize: vertical;
+}
+
+#map-source:focus-visible {
+	outline: 2px solid var(--text);
+	outline-offset: -2px;
+}
+
+@media (max-width: 520px) {
+	.topbar-inner {
+		flex-wrap: wrap;
+		padding-top: 12px;
+		padding-bottom: 12px;
+	}
+
+	.editor-grid {
+		grid-template-columns: 18px repeat(16, minmax(0, 1fr));
+		gap: 1px;
+		padding: 6px;
+	}
+
+	.editor-cell {
+		font-size: 8px;
+	}
+}

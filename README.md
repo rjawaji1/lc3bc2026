@@ -326,6 +326,25 @@ All mice choose actions before any attack or movement is applied. Running earlie
 
 ## Creating a map
 
+### Visual map editor
+
+Open [`viewer/index.html`](viewer/index.html) and select the **Map editor** tab, or open [`viewer/editor.html`](viewer/editor.html) directly. It works locally in your browser without a server or installation.
+
+- Design the blue source half with the wall, erase, mouse, cheese spawner, and 2×2 altar tools. The red half updates automatically using the simulator's reflection rules.
+- Drag to paint walls or erase. With the grid focused, use arrow keys to move and Enter or Space to place the selected tool.
+- Set a cheese spawner's initial delay in ticks; `0` means cheese is present at the start. Select its cell with the cheese tool to change the delay.
+- Switch between vertical and horizontal symmetry. The source design is transposed to fit the new source half.
+- Use **Open map** to edit an existing `.map` file. Undo and redo are available, including after imports and clearing the map.
+- The validation panel checks the simulator's placement requirements. Once valid, choose a filename and select **Download .map**. The file preview contains only the source half; the simulator generates the other half.
+
+Run the downloaded map with your bot programs:
+
+```sh
+odin run . -- run my-arena.map examples/team1.obj examples/team2.obj --replay my-arena.jsonl
+```
+
+### Map file format
+
 Maps are plain text files. Define one half of the arena, and the simulator mirrors it to create the other team's half.
 
 ```text

@@ -15,6 +15,10 @@
 				<button id="open-file" class="button primary" type="button">Open replay</button>
 				<input id="file" type="file" accept=".jsonl,.ndjson,.json" class="visually-hidden" />
 			</div>
+			<nav class="shell app-tabs" aria-label="Viewer tools">
+				<a href="index.html" aria-current="page">Replay viewer</a>
+				<a href="editor.html">Map editor</a>
+			</nav>
 		</header>
 
 		<main class="shell">
@@ -69,9 +73,7 @@
 						<input id="timeline" type="range" min="0" max="0" value="0" aria-label="Replay tick" disabled />
 						<div class="transport-controls">
 							<div class="playback-buttons">
-								<button id="first" title="First tick (Home)" aria-label="First tick" disabled>
-									⏮
-								</button>
+								<button id="first" title="First tick (Home)" aria-label="First tick" disabled>⏮</button>
 								<button
 									id="previous"
 									title="Previous tick (Left arrow)"

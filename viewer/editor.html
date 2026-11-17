@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Map Editor · LC3 BattleCode</title>
+		<link rel="stylesheet" href="style.css" />
+		<link rel="stylesheet" href="editor.css" />
+		<script defer src="map-format.js"></script>
+		<script defer src="editor.js"></script>
+	</head>
+	<body>
+		<header class="topbar">
+			<div class="shell topbar-inner">
+				<h1>Map Editor</h1>
+				<div class="editor-actions">
+					<button id="import-map" type="button">Open map</button>
+					<button id="download-map" class="button primary" type="button">Download .map</button>
+					<input id="map-file" type="file" accept=".map,text/plain" class="visually-hidden" />
+				</div>
+			</div>
+			<nav class="shell app-tabs" aria-label="Viewer tools">
+				<a href="index.html">Replay viewer</a>
+				<a href="editor.html" aria-current="page">Map editor</a>
+			</nav>
+		</header>
+
+		<main class="shell">
+			<section id="editor-notice" class="notice" role="status">
+				Design the blue source half. The red half is reflected automatically.
+			</section>
+			<div class="workspace">
+				<section class="panel arena-panel" aria-label="Map design">
+					<div class="panel-heading">
+						<h2>Arena</h2>
+						<span id="cell-label" class="mono">16 × 16 · select a tool to begin</span>
+					</div>
+					<div
+						id="editor-grid"
+						class="editor-grid"
+						role="group"
+						aria-label="16 by 16 map. Use arrow keys to move and Enter or Space to place the selected tool."
+					></div>
+					<div class="legend">
+						<span><i class="floor"></i>Floor</span>
+						<span><i class="wall"></i>Wall</span>
+						<span><i class="altar"></i>A1 / A2 altar</span>
+						<span><i class="cheese"></i>C cheese · number = delay</span>
+						<span>M1 / M2 mouse</span>
+					</div>
+					<div class="editor-footer">
+						<span id="source-label" class="muted"></span>
+						<div class="editor-actions">
+							<button id="undo" type="button" disabled>Undo</button>
+							<button id="redo" type="button" disabled>Redo</button>
+							<button id="clear-map" type="button">Clear map</button>
+						</div>
+					</div>
+				</section>
+
+				<aside>
+					<section class="panel">
+						<div class="panel-heading">
+							<h2>Drawing tools</h2>
+							<span class="mono">Click to place</span>
+						</div>
+						<div class="editor-fields">
+							<div id="tools" class="tool-grid" role="group" aria-label="Drawing tool">
+								<button type="button" data-tool="wall" aria-pressed="true">Wall</button>
+								<button type="button" data-tool="erase" aria-pressed="false">Erase / floor</button>
+								<button type="button" data-tool="mouse" aria-pressed="false">Mouse</button>
+								<button type="button" data-tool="cheese" aria-pressed="false">Cheese spawner</button>
+								<button type="button" data-tool="altar" aria-pressed="false">2×2 altar</button>
+							</div>
+							<label for="cheese-delay">Initial cheese delay <span class="muted">(ticks)</span></label>
+							<input id="cheese-delay" type="number" min="0" max="2147483647" step="1" value="0" />
+							<p class="editor-help">
+								Zero means cheese is present at the start. Click an existing spawner with the cheese
+								tool to update its delay.
+							</p>
+							<p class="editor-help">
+								Drag to paint walls or erase. Place the altar by its top-left cell. Erasing any altar
+								cell removes the whole altar.
+							</p>
+						</div>
+					</section>
+					<section class="panel">
+						<div class="panel-heading"><h2>Map settings</h2></div>
+						<div class="editor-fields">
+							<label for="map-symmetry">Symmetry</label>
+							<select id="map-symmetry">
+								<option value="VERTICAL">Vertical · left → right</option>
+								<option value="HORIZONTAL">Horizontal · top → bottom</option>
+							</select>
+							<p class="editor-help">
+								Changing symmetry transposes your source design. Preview uses the simulator's horizontal
+								and vertical mirror rules.
+							</p>
+							<label for="map-filename">Download filename</label>
+							<input
+								id="map-filename"
+								type="text"
+								value="my-arena.map"
+								maxlength="100"
+								spellcheck="false"
+							/>
+						</div>
+					</section>
+					<section class="panel">
+						<div class="panel-heading">
+							<h2>Validation</h2>
+							<span id="map-counts" class="mono"></span>
+						</div>
+						<div id="map-validation" class="inspection" aria-live="polite"></div>
+					</section>
+				</aside>
+			</div>
+			<section class="panel map-output">
+				<div class="panel-heading">
+					<h2>Map file preview</h2>
+					<span class="mono">Only the source half is exported</span>
+				</div>
+				<textarea id="map-source" readonly spellcheck="false" aria-label="Generated map file"></textarea>
+			</section>
+		</main>
+	</body>
+</html>
