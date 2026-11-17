@@ -299,7 +299,7 @@ register_trap_squeak :: proc(mouse: ^Mouse){
 register_trap_random :: proc(mouse: ^Mouse){
 	lc3.register_trap(
 		&mouse.vm,
-		TRAP_VECTOR_MOVE,
+		TRAP_VECTOR_RANDOM,
 		trap_random_callback,
 		mouse,
 	)
