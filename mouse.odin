@@ -7,13 +7,33 @@ TRAP_VECTOR_MOVE   :: 0x30
 TRAP_VECTOR_ATTACK :: 0x31
 TRAP_VECTOR_SQUEAK :: 0x32
 
+VM_OBSERVATION      :: 0xE000
+VM_OBS_MOUSE_ID     :: VM_OBSERVATION + 0
+VM_OBS_POS_X        :: VM_OBSERVATION + 1
+VM_OBS_POS_Y        :: VM_OBSERVATION + 2
+VM_OBS_CHEESE_STATE :: VM_OBSERVATION + 3
+VM_OBS_MAP_STATE    :: VM_OBSERVATION + 4
+
+MOUSE_VISION_RADIUS :: 2
+MOUSE_VISION_WIDTH :: MOUSE_VISION_RADIUS * 2 + 1
+MOUSE_VISION_CELLS :: MOUSE_VISION_WIDTH * MOUSE_VISION_WIDTH
+
+Observed_Tile :: enum u16 {
+	Floor = 0,
+	Wall = 1,
+	Cheese = 2,
+	Friendly_Altar = 3,
+	Enemy_Altar = 4,
+	Out_Of_Bounds = 5,
+}
+
 MAX_INSTRUCTIONS :: 10_000
 
 Direction :: enum {
 	North,
 	East,
 	South,
-	West
+	West,
 }
 
 Move_Action :: struct {
@@ -40,15 +60,20 @@ Mouse_Error :: enum {
 	Reserved_Instruction,
 }
 
+Mouse_ID :: distinct u16
+INVALID_MOUSE_ID :: Mouse_ID(0)
+
 Mouse :: struct {
-	pos:    Coordinate,
-	facing: Direction,
-	team:   Team,
-	vm:     lc3.LC3,
-	action: Mouse_Action,
+	id:         Mouse_ID,
+	pos:        Coordinate,
+	facing:     Direction,
+	team:       Team,
+	vm:         lc3.LC3,
+	action:     Mouse_Action,
+	has_cheese: bool,
 
 	// Traps don't return errors
-	fault: Mouse_Error
+	fault: Mouse_Error,
 }
 
 @(require_results)
@@ -66,6 +91,7 @@ mouse_init :: proc(mouse: ^Mouse, buffer: []u8) -> bool {
 	register_trap_move(mouse)
 	register_trap_attack(mouse)
 	register_trap_squeak(mouse)
+	mouse_sync_observations(mouse)
 
 	return true
 }
@@ -75,6 +101,7 @@ mouse_reset :: proc(mouse: ^Mouse){
 
 	mouse.action = nil
 	mouse.fault = .None
+	mouse_sync_observations(mouse)
 }
 
 mouse_destroy :: proc(mouse: ^Mouse){
@@ -86,10 +113,11 @@ mouse_run :: proc(mouse: ^Mouse) -> (action: Mouse_Action, err: Mouse_Error) {
 	fmt.assertf(mouse != nil, "mouse_run requires a non-nil mouse")
 	fmt.assertf(!mouse.vm.halted, "mouse_run called with a halted VM; call mouse_reset before running it again")
 
+	mouse_sync_observations(mouse)
 	mouse.action = nil
 	mouse.fault = .None
 
-	for i in 0..<MAX_INSTRUCTIONS {
+	for _ in 0..<MAX_INSTRUCTIONS {
 		vm_error := lc3.step(&mouse.vm)
 
 		// Map VM Errors To Custom Errors
@@ -119,6 +147,48 @@ mouse_run :: proc(mouse: ^Mouse) -> (action: Mouse_Action, err: Mouse_Error) {
 	return nil, .None
 }
 
+mouse_sync_observations :: proc(mouse: ^Mouse) {
+	lc3.memset(&mouse.vm, VM_OBS_MOUSE_ID, u16(mouse.id))
+	lc3.memset(&mouse.vm, VM_OBS_POS_X, u16(mouse.pos.x))
+	lc3.memset(&mouse.vm, VM_OBS_POS_Y, u16(mouse.pos.y))
+	lc3.memset(&mouse.vm, VM_OBS_CHEESE_STATE, u16(mouse.has_cheese))
+}
+
+mouse_sync_map_observations :: proc(mouse: ^Mouse, arena: ^Arena) {
+	for row in 0..<MOUSE_VISION_WIDTH {
+		for column in 0..<MOUSE_VISION_WIDTH {
+			position := Coordinate{
+				x = mouse.pos.x + column - MOUSE_VISION_RADIUS,
+				y = mouse.pos.y + row - MOUSE_VISION_RADIUS,
+			}
+			observed := Observed_Tile.Out_Of_Bounds
+
+			if position.x >= 0 && position.x < ARENA_WIDTH &&
+			   position.y >= 0 && position.y < ARENA_HEIGHT {
+				tile := arena.tiles[position.y * ARENA_WIDTH + position.x]
+				switch tile {
+				case .Floor:
+					observed = .Floor
+					for spawner in arena.cheese_spawners {
+						if spawner.pos == position && spawner.present {
+							observed = .Cheese
+							break
+						}
+					}
+				case .Wall:
+					observed = .Wall
+				case .Altar_Team_1, .Altar_Team_2:
+					friendly := (tile == .Altar_Team_1 && mouse.team == .One) ||
+					            (tile == .Altar_Team_2 && mouse.team == .Two)
+					observed = .Friendly_Altar if friendly else .Enemy_Altar
+				}
+			}
+
+			index := row * MOUSE_VISION_WIDTH + column
+			lc3.memset(&mouse.vm, u16(VM_OBS_MAP_STATE + index), u16(observed))
+		}
+	}
+}
 
 @(private="file")
 register_trap_move :: proc(mouse: ^Mouse){
@@ -126,7 +196,7 @@ register_trap_move :: proc(mouse: ^Mouse){
 		&mouse.vm,
 		TRAP_VECTOR_MOVE,
 		trap_move_callback,
-		mouse
+		mouse,
 	)
 
 	trap_move_callback :: proc(vm: ^lc3.LC3, user_data: rawptr){
@@ -153,7 +223,7 @@ register_trap_attack :: proc(mouse: ^Mouse){
 		&mouse.vm,
 		TRAP_VECTOR_ATTACK,
 		trap_attack_callback,
-		mouse
+		mouse,
 	)
 
 	trap_attack_callback :: proc(vm: ^lc3.LC3, user_data: rawptr){
@@ -169,7 +239,7 @@ register_trap_squeak :: proc(mouse: ^Mouse){
 		&mouse.vm,
 		TRAP_VECTOR_SQUEAK,
 		trap_squeak_callback,
-		mouse
+		mouse,
 	)
 
 	trap_squeak_callback :: proc(vm: ^lc3.LC3, user_data: rawptr){
@@ -178,4 +248,3 @@ register_trap_squeak :: proc(mouse: ^Mouse){
 		mouse.action = Squeak_Action{message = vm.registers[0]}
 	}
 }
-

@@ -22,6 +22,29 @@ Team_State :: struct {
 Game :: struct {
 	arena: Arena,
 	teams: [Team]Team_State,
+	last_mouse_id: Mouse_ID,
+}
+
+@(private="file")
+game_allocate_mouse_id :: proc(game: ^Game) -> Mouse_ID {
+	fmt.assertf(game.last_mouse_id < Mouse_ID(0xffff), "Mouse IDs exhausted")
+	game.last_mouse_id += 1
+	return game.last_mouse_id
+}
+
+game_find_mouse :: proc(game: ^Game, id: Mouse_ID) -> ^Mouse {
+	if id == INVALID_MOUSE_ID {
+		return nil
+	}
+
+	for team in game.teams {
+		for &mouse in team.mice {
+			if mouse.id == id {
+				return &mouse
+			}
+		}
+	}
+	return nil
 }
 
 game_init :: proc(
@@ -52,6 +75,7 @@ game_init :: proc(
 			// TODO: Better Error Handling
 			return
 		}
+		mouse_sync_map_observations(&mouse, &game.arena)
 	}
 
 	for &mouse in game.teams[.Two].mice {
@@ -60,6 +84,7 @@ game_init :: proc(
 			// TODO: Better Error Handling
 			return
 		}
+		mouse_sync_map_observations(&mouse, &game.arena)
 	}
 }
 
@@ -74,6 +99,7 @@ game_step :: proc(game: ^Game){
 	// Step Through
 	for team in game.teams {
 		for &mouse in team.mice {
+			mouse_sync_map_observations(&mouse, &game.arena)
 			action, run_err := mouse_run(&mouse)
 			if run_err != .None {
 				// Kill Mouse
@@ -99,7 +125,6 @@ game_step :: proc(game: ^Game){
 		}
 	}
 
-	// Sync Mouse Map State
 }
 
 game_destroy :: proc(game: ^Game){
@@ -182,18 +207,29 @@ game_load_map :: proc(game: ^Game, file_path: string) -> bool {
 			if !mouse_coord_ok { return false }
 
 			mouse: Mouse
+			mouse.id = game_allocate_mouse_id(game)
 			mouse.pos = mouse_coord
 			mouse.team = .One
 
 			append(&game.teams[.One].mice, mouse)
 
 		case "CHEESE":
+			if len(fields) != 3 { return false }
 			cheese_coords, cheese_coord_ok := parse_coordinate(fields[1])
 			if !cheese_coord_ok { return false; }
 
 			cheese_spawn_timer, cheese_spawn_timer_ok := strconv.parse_int(fields[2])
 			if !cheese_spawn_timer_ok || cheese_spawn_timer < 0 { return false; }
 
+			for spawner in game.arena.cheese_spawners {
+				if spawner.pos == cheese_coords { return false }
+			}
+
+			append(&game.arena.cheese_spawners, Cheese_Spawn{
+				pos = cheese_coords,
+				delay = cheese_spawn_timer,
+				present = cheese_spawn_timer == 0,
+			})
 
 		case:
 			return false
@@ -213,6 +249,7 @@ game_reflect :: proc(game: ^Game) {
 
 	for mouse in game.teams[.One].mice {
 		mouse_2: Mouse
+		mouse_2.id = game_allocate_mouse_id(game)
 		mouse_2.team = .Two
 		mouse_2.pos = mouse.pos
 
