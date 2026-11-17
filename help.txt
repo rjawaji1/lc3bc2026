@@ -1,0 +1,7 @@
+Usage:
+	app run <map_path> <team1_path> <team2_path>
+	app help
+
+Commands:
+	run  Run battlecode sim
+	help Show this help message
