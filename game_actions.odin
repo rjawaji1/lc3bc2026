@@ -48,6 +48,39 @@ mouse_move_destination :: proc(position: Coordinate, direction: Direction) -> Co
 	return destination
 }
 
+game_resolve_combat :: proc(game: ^Game) {
+	occupants: [ARENA_WIDTH * ARENA_HEIGHT]^Mouse
+	victims: [ARENA_WIDTH * ARENA_HEIGHT]bool
+	for team in game.teams {
+		for &mouse in team.mice {
+			if mouse.state != .Alive || !coordinate_in_bounds(mouse.pos) { continue }
+			occupants[mouse.pos.y * ARENA_WIDTH + mouse.pos.x] = &mouse
+		}
+	}
+
+	for turn in game.turns {
+		if turn.fault != .None { continue }
+		_, is_attack := turn.action.(Attack_Action)
+		if !is_attack { continue }
+		attacker := game_find_mouse(game, turn.mouse_id)
+		if attacker == nil || attacker.state != .Alive || !coordinate_in_bounds(attacker.pos) {
+			continue
+		}
+		target := mouse_move_destination(attacker.pos, attacker.facing)
+		if !coordinate_in_bounds(target) { continue }
+		index := target.y * ARENA_WIDTH + target.x
+		if game.arena.tiles[index] == .Wall { continue }
+		victim := occupants[index]
+		if victim != nil && victim.team != attacker.team {
+			victims[index] = true
+		}
+	}
+
+	for killed, index in victims {
+		if killed { game_kill_mouse(game, occupants[index]) }
+	}
+}
+
 game_resolve_movement :: proc(game: ^Game) {
 	occupied: [ARENA_WIDTH * ARENA_HEIGHT]bool
 	claims: [ARENA_WIDTH * ARENA_HEIGHT]int
@@ -84,6 +117,19 @@ game_resolve_movement :: proc(game: ^Game) {
 		index := candidate.destination.y * ARENA_WIDTH + candidate.destination.x
 		if claims[index] == 1 {
 			candidate.mouse.pos = candidate.destination
+		}
+	}
+}
+
+game_collect_cheese :: proc(game: ^Game) {
+	for team in game.teams {
+		for &mouse in team.mice {
+			if mouse.state != .Alive || mouse.has_cheese || !coordinate_in_bounds(mouse.pos) {
+				continue
+			}
+			index := mouse.pos.y * ARENA_WIDTH + mouse.pos.x
+			if game.arena.tiles[index] == .Wall { continue }
+			mouse.has_cheese = arena_take_cheese(&game.arena, mouse.pos)
 		}
 	}
 }

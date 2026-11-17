@@ -123,12 +123,19 @@ game_step :: proc(game: ^Game){
 	game_update_result(game)
 	if game.result != .Undecided { return }
 
+	game_tick_cheese(game)
 	game_collect_actions(game)
 	game_resolve_faults(game)
+	game_resolve_combat(game)
 	game_resolve_movement(game)
+	game_collect_cheese(game)
 	game_deposit_cheese(game)
 
-	// Count Down Cheese timers
+	game.tick += 1
+	game_update_result(game)
+}
+
+game_tick_cheese :: proc(game: ^Game) {
 	for &cheese_spawner in game.arena.cheese_spawners {
 		if cheese_spawner.present { continue }
 
@@ -142,8 +149,6 @@ game_step :: proc(game: ^Game){
 		}
 	}
 
-	game.tick += 1
-	game_update_result(game)
 }
 
 game_destroy :: proc(game: ^Game){
@@ -268,10 +273,12 @@ game_load_map :: proc(game: ^Game, file_path: string) -> bool {
 game_reflect :: proc(game: ^Game) {
 	arena_reflect(&game.arena)
 
-	for mouse in game.teams[.One].mice {
+	for &mouse in game.teams[.One].mice {
+		mouse.facing = .East if game.arena.symmetry == .Vertical else .South
 		mouse_2: Mouse
 		mouse_2.id = game_allocate_mouse_id(game)
 		mouse_2.team = .Two
+		mouse_2.facing = .West if game.arena.symmetry == .Vertical else .North
 		mouse_2.pos = mouse.pos
 
 		switch game.arena.symmetry {

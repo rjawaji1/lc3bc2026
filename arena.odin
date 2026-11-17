@@ -54,6 +54,23 @@ arena_has_cheese :: proc(arena: ^Arena, position: Coordinate) -> bool {
 	return false
 }
 
+arena_take_cheese :: proc(arena: ^Arena, position: Coordinate) -> bool {
+	if !coordinate_in_bounds(position) { return false }
+	index := position.y * ARENA_WIDTH + position.x
+	if arena.dropped_cheese[index] > 0 {
+		arena.dropped_cheese[index] -= 1
+		return true
+	}
+	for &spawner in arena.cheese_spawners {
+		if spawner.pos == position && spawner.present {
+			spawner.present = false
+			spawner.delay = CHEESE_SPAWN_TICKS
+			return true
+		}
+	}
+	return false
+}
+
 arena_drop_cheese :: proc(arena: ^Arena, position: Coordinate) {
 	if !coordinate_in_bounds(position) { return }
 	for &spawner in arena.cheese_spawners {
