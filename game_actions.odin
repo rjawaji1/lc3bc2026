@@ -6,7 +6,7 @@ game_collect_actions :: proc(game: ^Game) {
 		for &mouse in team.mice {
 			if mouse.state != .Alive { continue }
 			mouse_reset(&mouse)
-			mouse_sync_map_observations(&mouse, &game.arena)
+			mouse_sync_map_observations(&mouse, game)
 			action, fault := mouse_run(&mouse)
 			append(&game.turns, Mouse_Turn{
 				mouse_id = mouse.id,

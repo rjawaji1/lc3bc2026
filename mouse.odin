@@ -18,16 +18,23 @@ VM_OBS_CHEESE_STATE :: VM_OBSERVATION + 3
 VM_OBS_MAP_STATE    :: VM_OBSERVATION + 4
 
 MOUSE_VISION_RADIUS :: 2
-MOUSE_VISION_WIDTH :: MOUSE_VISION_RADIUS * 2 + 1
-MOUSE_VISION_CELLS :: MOUSE_VISION_WIDTH * MOUSE_VISION_WIDTH
+MOUSE_VISION_WIDTH  :: MOUSE_VISION_RADIUS * 2 + 1
+MOUSE_VISION_CELLS  :: MOUSE_VISION_WIDTH * MOUSE_VISION_WIDTH
 
-Observed_Tile :: enum u16 {
-	Floor = 0,
-	Wall = 1,
-	Cheese = 2,
-	Friendly_Altar = 3,
-	Enemy_Altar = 4,
-	Out_Of_Bounds = 5,
+Observed_Altar :: enum u16 {
+	None     = 0,
+	Friendly = 1,
+	Enemy    = 2,
+}
+
+Observed_Tile :: bit_field u16 {
+	blocked:         bool           | 1,
+	mouse_present:   bool           | 1,
+	enemy_mouse:     bool           | 1,
+	mouse_direction: u16            | 2,
+	cheese_timer:    i16            | 4,
+	altar:           Observed_Altar | 2,
+	reserved:        u16            | 5,
 }
 
 MAX_INSTRUCTIONS :: 10_000
@@ -173,35 +180,58 @@ mouse_sync_observations :: proc(mouse: ^Mouse) {
 	lc3.memset(&mouse.vm, VM_OBS_CHEESE_STATE, u16(mouse.has_cheese))
 }
 
-mouse_sync_map_observations :: proc(mouse: ^Mouse, arena: ^Arena) {
+mouse_sync_map_observations :: proc(mouse: ^Mouse, game: ^Game) {
+	arena := &game.arena
+
 	for row in 0..<MOUSE_VISION_WIDTH {
 		for column in 0..<MOUSE_VISION_WIDTH {
 			position := Coordinate{
 				x = mouse.pos.x + column - MOUSE_VISION_RADIUS,
 				y = mouse.pos.y + row - MOUSE_VISION_RADIUS,
 			}
-			observed := Observed_Tile.Out_Of_Bounds
+			observed := Observed_Tile{blocked = true, cheese_timer = -1}
 
-			if position.x >= 0 && position.x < ARENA_WIDTH &&
-			   position.y >= 0 && position.y < ARENA_HEIGHT {
+			if coordinate_in_bounds(position) {
 				tile := arena.tiles[position.y * ARENA_WIDTH + position.x]
+				observed.blocked = tile == .Wall
+
 				switch tile {
-				case .Floor:
-					observed = .Floor
-				case .Wall:
-					observed = .Wall
+				case .Floor, .Wall:
 				case .Altar_Team_1, .Altar_Team_2:
 					friendly := (tile == .Altar_Team_1 && mouse.team == .One) ||
 					            (tile == .Altar_Team_2 && mouse.team == .Two)
-					observed = .Friendly_Altar if friendly else .Enemy_Altar
+					observed.altar = .Friendly if friendly else .Enemy
 				}
-				if tile != .Wall && arena_has_cheese(arena, position) {
-					observed = .Cheese
+
+				if !observed.blocked {
+					if arena_has_cheese(arena, position) {
+						observed.cheese_timer = 0
+					} else {
+						for spawner in arena.cheese_spawners {
+							if spawner.pos != position { continue }
+							observed.cheese_timer = i16(clamp(spawner.delay, 0, 7))
+							break
+						}
+					}
+
+					for team in game.teams {
+						for occupant in team.mice {
+							if occupant.state != .Alive || occupant.pos != position { continue }
+							observed.mouse_present = true
+							observed.enemy_mouse   = occupant.team != mouse.team
+							switch occupant.facing {
+							case .North: observed.mouse_direction = 0
+							case .East:  observed.mouse_direction = 1
+							case .South: observed.mouse_direction = 2
+							case .West:  observed.mouse_direction = 3
+							}
+						}
+					}
 				}
 			}
 
 			index := row * MOUSE_VISION_WIDTH + column
-			lc3.memset(&mouse.vm, u16(VM_OBS_MAP_STATE + index), u16(observed))
+			lc3.memset(&mouse.vm, u16(VM_OBS_MAP_STATE + index), transmute(u16)observed)
 		}
 	}
 }

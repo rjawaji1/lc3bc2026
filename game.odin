@@ -103,7 +103,7 @@ game_init :: proc(
 			fmt.eprintf("Invalid Team 1 LC-3 program: %s\n", team1_filepath)
 			return false
 		}
-		mouse_sync_map_observations(&mouse, &game.arena)
+		mouse_sync_map_observations(&mouse, game)
 	}
 
 	for &mouse in game.teams[.Two].mice {
@@ -112,7 +112,7 @@ game_init :: proc(
 			fmt.eprintf("Invalid Team 2 LC-3 program: %s\n", team2_filepath)
 			return false
 		}
-		mouse_sync_map_observations(&mouse, &game.arena)
+		mouse_sync_map_observations(&mouse, game)
 	}
 	return true
 }
@@ -122,6 +122,7 @@ game_step :: proc(game: ^Game){
 	if game.result != .Undecided { return }
 
 	game_tick_cheese(game)
+	game_collect_cheese(game)
 	game_collect_actions(game)
 	game_resolve_faults(game)
 	game_resolve_combat(game)

@@ -229,18 +229,56 @@ For a relative offset `(dx,dy)`, where each offset is between −2 and 2, the ad
 xE004 + (dy + 2) * 5 + (dx + 2)
 ```
 
-Each cell contains one of these values:
+Each cell is a **packed 16-bit observation** with independent accessibility, mouse, cheese, and altar fields:
 
-| Value | Meaning |
-| --- | --- |
-| `0` | Floor |
-| `1` | Wall |
-| `2` | Cheese present |
-| `3` | Your team's altar |
-| `4` | The opposing team's altar |
-| `5` | Outside the arena |
+| Bits | Field | Meaning |
+|---|---|---|
+| 0 | Blocked | `0` traversable, `1` wall or out of bounds |
+| 1 | Mouse present | `1` if a living mouse occupies the cell |
+| 2 | Enemy mouse | `0` friendly, `1` enemy; ignored without a mouse |
+| 3–4 | Mouse direction | `0` north, `1` east, `2` south, `3` west |
+| 5–8 | Cheese countdown | Signed four-bit value, described below |
+| 9–10 | Altar | `0` none, `1` friendly, `2` enemy; `3` reserved |
+| 11–15 | Reserved | Zero |
 
-**Other mice are not encoded in the observation grid.** A floor observation does not guarantee that a cell is unoccupied. The grid also does not report cheese quantities or spawner countdowns. If cheese is present, its value takes priority over the underlying altar terrain.
+The cheese countdown is measured in **ticks**, not seconds:
+
+- **`-1`**: no cheese and no scheduled spawn. Encoded as binary `1111` in bits 5–8.
+- **`0`**: cheese is present.
+- **`1`–`6`**: ticks until cheese appears.
+- **`7`**: seven or more ticks until cheese appears.
+
+Values `-8` through `-2` are unused. Cheese does not expire, and cheese quantities are not reported. Dropped cheese also reports `0`, even if a spawner underneath it is counting down.
+
+Mouse, cheese, and altar data are independent: **a mouse no longer hides cheese or an altar underneath it**. Dead mice are not observed. Mouse direction and enemy fields are zero when no living mouse is present.
+
+Your own mouse is included in the center word at `xE010`, with its facing direction and an enemy flag of zero. Direction codes differ from the movement trap: east is `1` here but `3` for `TRAP x30`.
+
+Spawner timers advance and empty-handed mice collect cheese before observations are generated. All mice then observe the same pre-action game state; observations do not reveal actions requested during that tick. Cheese is collected again after movement.
+
+For example, an enemy mouse facing east on cheese at a friendly altar is `x020E`: mouse present `x0002`, enemy `x0004`, east `x0008`, cheese countdown zero, and friendly altar `x0200`. A traversable empty floor cell with no scheduled cheese is `x01E0`; blocked cells are `x01E1`.
+
+Use masks to read fields rather than comparing entire observation words:
+
+```asm
+LDI R0, EAST_CELL
+AND R1, R0, #1
+BRnp BLOCKED
+AND R1, R0, #2
+BRz NO_MOUSE
+AND R2, R0, #4
+; R2 is nonzero for an enemy mouse.
+
+BLOCKED
+NO_MOUSE
+; Continue decision logic here.
+
+EAST_CELL .FILL xE011
+```
+
+Useful masks are `x0001` (blocked), `x0002` (mouse present), `x0004` (enemy), `x0018` (direction), `x01E0` (cheese), and `x0600` (altar). For example, `word & x01E0 == 0` means cheese is present. The four-bit countdown uses two's complement; it must be sign-extended if decoded into a larger signed integer.
+
+This replaces both the old terrain-only format and the tile-kind format. Existing bots must use the new masks.
 
 ### Reserved addresses
 
@@ -268,7 +306,7 @@ Attacks resolve simultaneously, so two adjacent enemies facing each other can ki
 
 A mouse carries at most one piece of cheese. Pickup and deposit are automatic; no trap is required.
 
-After movement, an empty-handed mouse picks up cheese at its position. Dropped cheese is collected before cheese from a spawner. Collecting a spawner's cheese starts a five-tick respawn timer.
+After spawner timers advance, an empty-handed mouse immediately picks up cheese at its position, before observations and actions. Pickup runs again after movement. A mouse already carrying cheese leaves additional cheese untouched. Dropped cheese is collected before cheese from a spawner. Collecting a spawner's cheese starts a five-tick respawn timer.
 
 A mouse carrying cheese on any tile of its own 2×2 altar deposits it and earns **one point** for its team. A mouse that dies drops its carried cheese at its position, where another mouse can collect it.
 
@@ -276,7 +314,7 @@ A mouse carrying cheese on any tile of its own 2×2 altar deposits it and earns 
 
 The simulator processes each tick in this order:
 
-1. Advance cheese spawner timers.
+1. Advance cheese spawner timers, then collect cheese for empty-handed mice at their current positions.
 2. Refresh observations and collect an action from each living mouse.
 3. Kill mice whose programs faulted.
 4. Resolve attacks simultaneously and apply deaths.
@@ -349,7 +387,7 @@ The exit code reports whether the command succeeded, **not which team won**. Rea
 
 **My program keeps starting over.** That is expected. Store progress in memory because registers and the program counter reset every tick.
 
-**My mouse sees floor but cannot move there.** Another mouse may occupy the cell, or multiple mice may be trying to enter it. Mouse occupancy is not included in the observation grid.
+**My mouse sees empty floor but cannot move there.** Multiple mice may be trying to enter that cell during the same tick, in which case all their moves fail. Cells already occupied by living mice have the mouse-present bit set.
 
 **Replay recording fails.** Make sure the parent directory exists and is writable, and that any existing replay file is writable.
 
