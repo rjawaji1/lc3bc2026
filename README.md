@@ -153,6 +153,13 @@ One hit kills an enemy mouse. Friendly fire is disabled, and attacking an empty 
 
 Mice initially face toward the opposing half of the arena: east or west on a vertically mirrored map, south or north on a horizontally mirrored map.
 
+### Random: `Trap x32`
+```
+TRAP x33
+```
+
+Generate a random number which will be stored in register 0
+
 ### Wait: `HALT`
 
 ```asm

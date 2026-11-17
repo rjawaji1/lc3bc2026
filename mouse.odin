@@ -1,11 +1,14 @@
 package main
 
 import "core:fmt"
+import "core:math/rand"
+
 import lc3 "vendor/liblc3"
 
 TRAP_VECTOR_MOVE   :: 0x30
 TRAP_VECTOR_ATTACK :: 0x31
 TRAP_VECTOR_SQUEAK :: 0x32
+TRAP_VECTOR_RANDOM :: 0x33
 
 VM_OBSERVATION      :: 0xE000
 VM_OBS_MOUSE_ID     :: VM_OBSERVATION + 0
@@ -106,6 +109,7 @@ mouse_init :: proc(mouse: ^Mouse, buffer: []u8) -> bool {
 	register_trap_move(mouse)
 	register_trap_attack(mouse)
 	register_trap_squeak(mouse)
+	register_trap_random(mouse)
 	mouse_sync_observations(mouse)
 
 	return true
@@ -258,5 +262,20 @@ register_trap_squeak :: proc(mouse: ^Mouse){
 		mouse := (^Mouse)(user_data)
 
 		mouse.action = Squeak_Action{message = vm.registers[0]}
+	}
+}
+
+@(private="file")
+register_trap_random :: proc(mouse: ^Mouse){
+	lc3.register_trap(
+		&mouse.vm,
+		TRAP_VECTOR_MOVE,
+		trap_random_callback,
+		mouse,
+	)
+
+	trap_random_callback :: proc(vm: ^lc3.LC3, user_data: rawptr){
+		mouse := (^Mouse)(user_data)
+		mouse.vm.registers[0x0] = u16(rand.uint32())
 	}
 }
