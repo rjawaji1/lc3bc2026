@@ -6,11 +6,13 @@ import "core:strings"
 ARENA_WIDTH :: 16
 ARENA_HEIGHT :: 16
 
+CHEESE_SPAWN_TICKS :: 5
+
 Tile :: enum {
 	Floor,
 	Wall,
 	Altar_Team_1,
-	Altar_Team_2
+	Altar_Team_2,
 }
 
 Symmetry :: enum {
@@ -18,14 +20,25 @@ Symmetry :: enum {
 	Vertical,
 }
 
+Cheese_Spawn :: struct {
+	delay:   int,
+	present: bool,
+	pos:     Coordinate
+}
+
 Arena :: struct {
 	tiles:    [ARENA_HEIGHT * ARENA_WIDTH]Tile,
+	cheese_spawners: [dynamic]Cheese_Spawn,
 	symmetry: Symmetry,
 }
 
 Coordinate :: struct {
 	x: int,
 	y: int,
+}
+
+arena_destroy :: proc(arena: ^Arena){
+	delete(arena.cheese_spawners)
 }
 
 
