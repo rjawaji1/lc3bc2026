@@ -1,10 +1,14 @@
 Usage:
-	app run <map_path> <team1_path> <team2_path>
+	app run <map_path> <team1_path> <team2_path> [--replay <new_file.jsonl>]
 	app help
 
 Commands:
 	run  Run a match using a text map and two LC-3 object programs
 	help Show this help message
+
+Replay:
+	--replay records tick 0 and every completed tick as JSON Lines.
+	The output path must not already exist. Open viewer/index.html to play it.
 
 Match rules:
 	A team loses when all its mice are dead. Simultaneous elimination is a draw.
@@ -12,5 +16,5 @@ Match rules:
 
 Exit codes:
 	0 Match completed or help displayed (including draws).
-	1 Map or program loading failed.
+	1 Map/program loading or replay output failed.
 	2 Invalid command or arguments.
