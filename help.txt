@@ -8,7 +8,7 @@ Commands:
 
 Replay:
 	--replay records tick 0 and every completed tick as JSON Lines.
-	The output path must not already exist. Open viewer/index.html to play it.
+	Existing output files are overwritten. Open viewer/index.html to play it.
 
 Match rules:
 	A team loses when all its mice are dead. Simultaneous elimination is a draw.

@@ -45,7 +45,7 @@ The terminal prints the input files, final scores, surviving mouse counts, and m
 odin run . -- run examples/showcase.map examples/team1.obj examples/team2.obj --replay match.jsonl
 ```
 
-The replay file must **not already exist**, and its parent directory must exist. Choose a new filename for each recording.
+An existing replay file is **overwritten**. Its parent directory must exist.
 
 Open [`viewer/index.html`](viewer/index.html) in your browser and select `match.jsonl`. You can play or pause the match, step through ticks, scrub the timeline, and select mice to inspect their state and actions. No server or package installation is required.
 
@@ -351,6 +351,6 @@ The exit code reports whether the command succeeded, **not which team won**. Rea
 
 **My mouse sees floor but cannot move there.** Another mouse may occupy the cell, or multiple mice may be trying to enter it. Mouse occupancy is not included in the observation grid.
 
-**Replay recording fails.** Choose a filename that does not already exist and make sure its parent directory exists and is writable.
+**Replay recording fails.** Make sure the parent directory exists and is writable, and that any existing replay file is writable.
 
 For more playback controls and the recording format, see the [replay guide](docs/replay.md).

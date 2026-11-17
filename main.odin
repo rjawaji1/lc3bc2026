@@ -22,9 +22,9 @@ command_run :: proc(map_path, team1_path, team2_path: string, replay_path: strin
 		if replay_file != nil { os.close(replay_file) }
 	}
 	if replay_path != "" {
-		file, err := os.open(replay_path, {.Write, .Create, .Excl}, os.Permissions_Default_File)
+		file, err := os.open(replay_path, {.Write, .Create, .Trunc}, os.Permissions_Default_File)
 		if err != nil {
-			fmt.eprintf("Unable to create replay: %s (choose a path that does not already exist)\n", replay_path)
+			fmt.eprintf("Unable to create or overwrite replay: %s\n", replay_path)
 			return false
 		}
 		replay_file = file
