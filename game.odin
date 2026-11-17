@@ -25,11 +25,27 @@ Mouse_Turn :: struct {
 	fault: Mouse_Error,
 }
 
+Game_Result :: enum {
+	Undecided,
+	Team_One_Won,
+	Team_Two_Won,
+	Draw,
+}
+
+Game_End_Reason :: enum {
+	None,
+	Elimination,
+	Tick_Limit,
+}
+
 Game :: struct {
 	arena: Arena,
 	teams: [Team]Team_State,
 	last_mouse_id: Mouse_ID,
 	turns: [dynamic]Mouse_Turn,
+	tick: int,
+	result: Game_Result,
+	end_reason: Game_End_Reason,
 }
 
 @(private="file")
@@ -59,28 +75,35 @@ game_init :: proc(
 	map_filepath: string,
 	team1_filepath: string,
 	team2_filepath: string,
-){
+) -> bool {
 	if !game_load_map(game, map_filepath) {
-		return
+		fmt.eprintf("Unable to load map: %s\n", map_filepath)
+		return false
+	}
+	if len(game.teams[.One].mice) == 0 || len(game.teams[.Two].mice) == 0 {
+		fmt.eprintln("Map must contain at least one mouse per team")
+		return false
 	}
 
 	team1_code, team1_load_err := os.read_entire_file_from_path(team1_filepath, context.allocator)
 	if team1_load_err != nil {
-		fmt.print("Unable to load Team 1 Code")
+		fmt.eprintf("Unable to read Team 1 program: %s\n", team1_filepath)
+		return false
 	}
 	defer delete(team1_code)
 
 	team2_code, team2_load_err := os.read_entire_file_from_path(team2_filepath, context.allocator)
 	if team2_load_err != nil {
-		fmt.print("Unable to load Team 1 Code")
+		fmt.eprintf("Unable to read Team 2 program: %s\n", team2_filepath)
+		return false
 	}
 	defer delete(team2_code)
 
 	for &mouse in game.teams[.One].mice {
 		ok := mouse_init(&mouse, team1_code)
 		if !ok {
-			// TODO: Better Error Handling
-			return
+			fmt.eprintf("Invalid Team 1 LC-3 program: %s\n", team1_filepath)
+			return false
 		}
 		mouse_sync_map_observations(&mouse, &game.arena)
 	}
@@ -88,14 +111,18 @@ game_init :: proc(
 	for &mouse in game.teams[.Two].mice {
 		ok := mouse_init(&mouse, team2_code)
 		if !ok {
-			// TODO: Better Error Handling
-			return
+			fmt.eprintf("Invalid Team 2 LC-3 program: %s\n", team2_filepath)
+			return false
 		}
 		mouse_sync_map_observations(&mouse, &game.arena)
 	}
+	return true
 }
 
 game_step :: proc(game: ^Game){
+	game_update_result(game)
+	if game.result != .Undecided { return }
+
 	game_collect_actions(game)
 	game_resolve_faults(game)
 	game_resolve_movement(game)
@@ -115,6 +142,8 @@ game_step :: proc(game: ^Game){
 		}
 	}
 
+	game.tick += 1
+	game_update_result(game)
 }
 
 game_destroy :: proc(game: ^Game){
@@ -142,6 +171,7 @@ game_load_map :: proc(game: ^Game, file_path: string) -> bool {
 		fields := strings.fields(line)
 		defer delete(fields)
 
+		if len(fields) == 0 { continue }
 		if len(fields) < 2 {
 			return false
 		}

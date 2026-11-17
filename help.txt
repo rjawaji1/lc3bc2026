@@ -3,5 +3,14 @@ Usage:
 	app help
 
 Commands:
-	run  Run battlecode sim
+	run  Run a match using a text map and two LC-3 object programs
 	help Show this help message
+
+Match rules:
+	A team loses when all its mice are dead. Simultaneous elimination is a draw.
+	After 10,000 ticks, the higher score wins. Equal scores are a draw.
+
+Exit codes:
+	0 Match completed or help displayed (including draws).
+	1 Map or program loading failed.
+	2 Invalid command or arguments.
