@@ -84,6 +84,15 @@ Mouse :: struct {
 
 @(require_results)
 mouse_init :: proc(mouse: ^Mouse, buffer: []u8) -> bool {
+	if len(buffer) < 4 || len(buffer) % 2 != 0 { return false }
+	origin := int(buffer[0]) << 8 | int(buffer[1])
+	end := origin + (len(buffer) - 2) / 2
+	observation_end := VM_OBS_MAP_STATE + MOUSE_VISION_CELLS
+	if end > lc3.MEMORY_SIZE ||
+	   (origin < observation_end && end > VM_OBSERVATION) {
+		return false
+	}
+
 	lc3.init(&mouse.vm)
 	mouse.action = nil
 	mouse.fault = .None
