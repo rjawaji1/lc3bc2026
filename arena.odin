@@ -63,6 +63,18 @@ arena_reflect :: proc(arena: ^Arena){
 			}
 		}
 	}
+
+	source_count := len(arena.cheese_spawners)
+	for i in 0..<source_count {
+		spawner := arena.cheese_spawners[i]
+		switch arena.symmetry {
+		case .Vertical:
+			spawner.pos.x = ARENA_WIDTH - 1 - spawner.pos.x
+		case .Horizontal:
+			spawner.pos.y = ARENA_HEIGHT - 1 - spawner.pos.y
+		}
+		append(&arena.cheese_spawners, spawner)
+	}
 }
 
 parse_coordinate :: proc(str_coord: string) -> (Coordinate, bool) {
