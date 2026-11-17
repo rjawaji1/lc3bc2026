@@ -1,45 +1,127 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LC3 BattleCode · Replay</title>
-  <link rel="stylesheet" href="style.css">
-  <script defer src="replay.js"></script>
-  <script defer src="viewer.js"></script>
-</head>
-<body>
-  <header class="topbar">
-    <div><span class="eyebrow">LC3 BATTLECODE / 2026</span><h1>Replay lab<span class="accent">.</span></h1></div>
-    <label class="button primary" for="file">Open replay <span aria-hidden="true">↗</span></label>
-    <input id="file" type="file" accept=".jsonl,.ndjson,.json" class="visually-hidden">
-  </header>
-  <main>
-    <section id="notice" class="notice" role="status">Drop a .jsonl replay anywhere, or choose Open replay. Files stay in your browser.</section>
-    <section class="scoreboard" aria-label="Match summary">
-      <div class="team team-one"><span class="team-label">TEAM 01</span><strong id="score-one">—</strong><span id="name-one" class="program">Waiting for replay</span><small id="alive-one">— alive</small></div>
-      <div class="match"><span id="result" class="result">NO MATCH LOADED</span><span id="map-name">16 × 16 arena</span><small id="recording-status">State snapshots · local playback</small></div>
-      <div class="team team-two"><span class="team-label">TEAM 02</span><strong id="score-two">—</strong><span id="name-two" class="program">Waiting for replay</span><small id="alive-two">— alive</small></div>
-    </section>
-    <div class="workspace">
-      <section class="arena-panel panel" aria-label="Arena replay">
-        <div class="panel-heading"><h2>Arena</h2><span id="tick-label" class="mono">TICK — / —</span></div>
-        <div class="board-wrap"><canvas id="board" width="960" height="960" aria-label="16 by 16 arena. Select a mouse in the roster to inspect it."></canvas><div id="empty" class="empty"><span class="empty-icon">⌘</span><h2>A match, one tick at a time.</h2><p>Record a game with <code>--replay match.jsonl</code><br>and open the file here.</p></div></div>
-        <div class="legend"><span><i class="floor"></i>Floor</span><span><i class="wall"></i>Wall</span><span><i class="cheese"></i>Cheese</span><span><i class="altar"></i>Altar</span><span class="muted">Dashed ring = spawner</span></div>
-        <div class="transport">
-          <div class="playback-buttons"><button id="first" title="First tick (Home)" aria-label="First tick" disabled>⏮</button><button id="previous" title="Previous tick (Left arrow)" aria-label="Previous tick" disabled>←</button><button id="play" class="play" disabled>Play</button><button id="next" title="Next tick (Right arrow)" aria-label="Next tick" disabled>→</button><button id="last" title="Last tick (End)" aria-label="Last tick" disabled>⏭</button></div>
-          <label class="speed">Speed <select id="speed"><option value="1">1 tick/s</option><option value="4" selected>4 ticks/s</option><option value="10">10 ticks/s</option><option value="30">30 ticks/s</option></select></label>
-          <input id="timeline" type="range" min="0" max="0" value="0" aria-label="Replay tick" disabled>
-        </div>
-        <div class="view-options"><label><input id="show-actions" type="checkbox" checked> Action requests</label><label><input id="show-dead" type="checkbox" checked> Dead mice</label><label><input id="show-vision" type="checkbox"> Selected mouse’s vision</label><span class="muted">Space to play · ← → to step</span></div>
-      </section>
-      <aside>
-        <section class="panel inspector"><div class="panel-heading"><h2>Mouse inspector</h2><span class="eyebrow">LIVE STATE</span></div><div id="inspection" class="inspection muted">Click a mouse in the arena or roster to inspect its state and radius-2 vision.</div></section>
-        <section class="panel"><div class="panel-heading"><h2>Roster</h2><span id="roster-count" class="mono">0 MICE</span></div><div id="roster" class="roster muted">No mice loaded.</div></section>
-        <section class="panel"><div class="panel-heading"><h2>Tick details</h2><span class="eyebrow">REQUESTS / CHANGES</span></div><div id="events" class="events muted">Actions belong to the transition into the displayed tick. They are requests, not guaranteed outcomes.</div></section>
-      </aside>
-    </div>
-    <footer>LC3 REPLAY FORMAT v1 <span>Full-state playback · no simulator or server required</span></footer>
-  </main>
-</body>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Replay Viewer</title>
+		<link rel="stylesheet" href="style.css" />
+		<script defer src="replay.js"></script>
+		<script defer src="viewer.js"></script>
+	</head>
+	<body>
+		<header class="topbar">
+			<div class="shell topbar-inner">
+				<h1>Replay Viewer</h1>
+				<button id="open-file" class="button primary" type="button">Open replay</button>
+				<input id="file" type="file" accept=".jsonl,.ndjson,.json" class="visually-hidden" />
+			</div>
+		</header>
+
+		<main class="shell">
+			<section id="notice" class="notice" role="status"></section>
+
+			<section class="scoreboard" aria-label="Match summary">
+				<div class="team team-one">
+					<span class="team-label">Team 1</span>
+					<strong id="score-one">—</strong>
+					<span id="name-one" class="program">—</span>
+					<small id="alive-one">—</small>
+				</div>
+				<div class="match">
+					<span id="result" class="result">No match loaded</span>
+					<span id="map-name">—</span>
+					<small id="recording-status"></small>
+				</div>
+				<div class="team team-two">
+					<span class="team-label">Team 2</span>
+					<strong id="score-two">—</strong>
+					<span id="name-two" class="program">—</span>
+					<small id="alive-two">—</small>
+				</div>
+			</section>
+
+			<div class="workspace">
+				<section class="panel arena-panel" aria-label="Arena replay">
+					<div class="panel-heading">
+						<h2>Arena</h2>
+						<span id="tick-label" class="mono">Tick — / —</span>
+					</div>
+					<div class="board-wrap">
+						<canvas
+							id="board"
+							width="960"
+							height="960"
+							aria-label="16 by 16 arena. Select a mouse in the roster to inspect it."
+						></canvas>
+						<div id="empty" class="empty">
+							<p>No replay loaded</p>
+							<small>Open a .jsonl replay to view the match.</small>
+						</div>
+					</div>
+					<div class="legend">
+						<span><i class="floor"></i>Floor</span>
+						<span><i class="wall"></i>Wall</span>
+						<span><i class="cheese"></i>Cheese</span>
+						<span><i class="altar"></i>Altar</span>
+						<span><i class="spawner"></i>Spawner</span>
+					</div>
+					<div class="transport">
+						<input id="timeline" type="range" min="0" max="0" value="0" aria-label="Replay tick" disabled />
+						<div class="transport-controls">
+							<div class="playback-buttons">
+								<button id="first" title="First tick (Home)" aria-label="First tick" disabled>
+									⏮
+								</button>
+								<button
+									id="previous"
+									title="Previous tick (Left arrow)"
+									aria-label="Previous tick"
+									disabled
+								>
+									←
+								</button>
+								<button id="play" class="play" disabled>Play</button>
+								<button id="next" title="Next tick (Right arrow)" aria-label="Next tick" disabled>
+									→
+								</button>
+								<button id="last" title="Last tick (End)" aria-label="Last tick" disabled>⏭</button>
+							</div>
+							<label class="speed"
+								>Speed
+								<select id="speed">
+									<option value="1">1 tick/s</option>
+									<option value="4" selected>4 ticks/s</option>
+									<option value="10">10 ticks/s</option>
+									<option value="30">30 ticks/s</option>
+								</select>
+							</label>
+						</div>
+					</div>
+					<div class="view-options">
+						<label><input id="show-actions" type="checkbox" checked /> Action requests</label>
+						<label><input id="show-dead" type="checkbox" checked /> Dead mice</label>
+						<label><input id="show-vision" type="checkbox" /> Selected mouse's vision</label>
+					</div>
+				</section>
+
+				<aside>
+					<section class="panel inspector">
+						<div class="panel-heading"><h2>Inspector</h2></div>
+						<div id="inspection" class="inspection muted">Select a mouse to inspect it.</div>
+					</section>
+					<section class="panel">
+						<div class="panel-heading">
+							<h2>Roster</h2>
+							<span id="roster-count" class="mono">0 mice</span>
+						</div>
+						<div id="roster" class="roster muted">No mice loaded.</div>
+					</section>
+					<section class="panel">
+						<div class="panel-heading"><h2>Events</h2></div>
+						<div id="events" class="events muted">No actions.</div>
+					</section>
+				</aside>
+			</div>
+		</main>
+	</body>
 </html>
