@@ -42,5 +42,5 @@ a mutual kill, change team 2's final `.FILL #5` (wait) to `.FILL #4` (attack),
 reassemble, and record to a new replay file.
 
 The action table values 4 (attack) and 5 (wait) belong to these example bots, not
-to the movement trap. Values 0–3 are passed to `move` in `r0`: north, west, south,
-and east respectively. Change the table entries to experiment with the routes.
+to the movement trap. Values 0–3 are passed to `move` in `r0`: north, east, south,
+and west respectively. Change the table entries to experiment with the routes.

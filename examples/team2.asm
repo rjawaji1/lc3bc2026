@@ -1,7 +1,7 @@
 ; Scripted showcase bot for team 2.
 ; Registers reset every tick, but the Step counter in VM memory persists.
 ; The host stops execution after one move or attack request.
-; Action codes: 0 north, 1 west, 2 south, 3 east, 4 attack, 5 wait.
+; Action codes: 0 north, 1 east, 2 south, 3 west, 4 attack, 5 wait.
 ; Assemble with the aliases documented in examples/README.md.
 
 .ORIG x3000
@@ -38,16 +38,16 @@ Step
     .FILL #0
 
 Actions
-    .FILL #1                ; Tick 1: west onto cheese at (11,3).
-    .FILL #3                ; Tick 2: east to (12,3), carrying cheese.
-    .FILL #3                ; Tick 3: east to (13,3).
+    .FILL #3                ; Tick 1: west onto cheese at (11,3).
+    .FILL #1                ; Tick 2: east to (12,3), carrying cheese.
+    .FILL #1                ; Tick 3: east to (13,3).
     .FILL #0                ; Tick 4: north onto the altar; deposit cheese.
     .FILL #2                ; Tick 5: south to (13,3).
-    .FILL #1                ; Tick 6: west to (12,3).
-    .FILL #1                ; Tick 7: west onto respawned cheese at (11,3).
-    .FILL #1                ; Tick 8: west to (10,3).
-    .FILL #1                ; Tick 9: west to (9,3).
-    .FILL #1                ; Tick 10: west to (8,3), facing team 1.
+    .FILL #3                ; Tick 6: west to (12,3).
+    .FILL #3                ; Tick 7: west onto respawned cheese at (11,3).
+    .FILL #3                ; Tick 8: west to (10,3).
+    .FILL #3                ; Tick 9: west to (9,3).
+    .FILL #3                ; Tick 10: west to (8,3), facing team 1.
     .FILL #5                ; Tick 11 onward: wait; team 1 attacks and wins.
 
 .END

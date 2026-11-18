@@ -110,12 +110,12 @@ This program reads the mouse's X coordinate and moves toward the center of the a
     BRn GO_EAST         ; X < 8: move east.
 
     AND R0, R0, #0
-    ADD R0, R0, #1      ; Direction 1 is west.
+    ADD R0, R0, #3      ; Direction 3 is west.
     TRAP x30
 
 GO_EAST
     AND R0, R0, #0
-    ADD R0, R0, #3      ; Direction 3 is east.
+    ADD R0, R0, #1      ; Direction 1 is east.
     TRAP x30
 
 OBS_X .FILL xE001
@@ -137,15 +137,15 @@ Put the direction in **R0** before calling the trap:
 | R0 | Direction | Coordinate change |
 | --- | --- | --- |
 | `0` | North | Y decreases by 1 |
-| `1` | West | X decreases by 1 |
+| `1` | East | X increases by 1 |
 | `2` | South | Y increases by 1 |
-| `3` | East | X increases by 1 |
+| `3` | West | X decreases by 1 |
 
 For example, move east:
 
 ```asm
 AND R0, R0, #0
-ADD R0, R0, #3
+ADD R0, R0, #1
 TRAP x30
 ```
 
@@ -229,9 +229,9 @@ South     xE018 xE019 xE01A xE01B xE01C
 | Neighbor | Address |
 | --- | --- |
 | North | `xE00B` |
-| West | `xE00F` |
-| South | `xE015` |
 | East | `xE011` |
+| South | `xE015` |
+| West | `xE00F` |
 
 For a relative offset `(dx,dy)`, where each offset is between −2 and 2, the address is:
 
@@ -262,7 +262,7 @@ Values `-8` through `-2` are unused. Cheese does not expire, and cheese quantiti
 
 Mouse, cheese, and altar data are independent: **a mouse no longer hides cheese or an altar underneath it**. Dead mice are not observed. Mouse direction and enemy fields are zero when no living mouse is present.
 
-Your own mouse is included in the center word at `xE010`, with its facing direction and an enemy flag of zero. Direction codes differ from the movement trap: east is `1` here but `3` for `TRAP x30`.
+Your own mouse is included in the center word at `xE010`, with its facing direction and an enemy flag of zero. Direction codes match `TRAP x30`: `0` north, `1` east, `2` south, `3` west.
 
 Spawner timers advance and empty-handed mice collect cheese before observations are generated. All mice then observe the same pre-action game state; observations do not reveal actions requested during that tick. Cheese is collected again after movement.
 

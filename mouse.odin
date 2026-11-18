@@ -252,11 +252,11 @@ register_trap_move :: proc(mouse: ^Mouse){
 		case 0x0:
 			mouse.action = Move_Action{direction = .North}
 		case 0x1:
-			mouse.action = Move_Action{direction = .West}
+			mouse.action = Move_Action{direction = .East}
 		case 0x2:
 			mouse.action = Move_Action{direction = .South}
 		case 0x3:
-			mouse.action = Move_Action{direction = .East}
+			mouse.action = Move_Action{direction = .West}
 		case:
 			mouse.fault = .Invalid_Direction
 		}
