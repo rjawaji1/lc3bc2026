@@ -52,6 +52,10 @@
 							record.tiles.every((n) => integer(n, 0, 3)),
 						'Invalid terrain',
 					);
+					check(
+						record.vm_snapshots === undefined || typeof record.vm_snapshots === 'boolean',
+						'Invalid VM snapshot flag',
+					);
 					header = record;
 					continue;
 				}
@@ -95,6 +99,19 @@
 						'Invalid mouse state',
 					);
 					check(!mouse.has_cheese || mouse.alive, 'Dead mouse cannot carry cheese');
+					check(header.vm_snapshots !== true || object(mouse.vm), 'Missing VM snapshot');
+					if (mouse.vm !== undefined && mouse.vm !== null) {
+						const vm = mouse.vm;
+						check(
+							object(vm) &&
+								Array.isArray(vm.registers) &&
+								vm.registers.length === 8 &&
+								vm.registers.every((value) => integer(value, 0, 65535)) &&
+								integer(vm.pc, 0, 65535) &&
+								[1, 2, 4].includes(vm.cc),
+							'Invalid VM snapshot',
+						);
+					}
 					if (mouse.alive) {
 						const cell = mouse.y * 16 + mouse.x;
 						check(

@@ -45,13 +45,23 @@ The terminal prints the input files, final scores, surviving mouse counts, and m
 odin run . -- run examples/showcase.map examples/team1.obj examples/team2.obj --replay match.jsonl
 ```
 
-An existing replay file is **overwritten**. Its parent directory must exist.
+An existing replay file is **overwritten**. Its parent directory must exist. Replay files are plain JSON Lines, and every new recording includes LC-3 register snapshots.
 
 Open [`viewer/index.html`](viewer/index.html) in your browser and select `match.jsonl`. You can play or pause the match, step through ticks, scrub the timeline, and select mice to inspect their state and actions. No server or package installation is required.
 
 To try playback without running a match, open the included [`examples/showcase.replay.jsonl`](examples/showcase.replay.jsonl).
 
 The viewer shows the whole arena. Your bot only receives the observations described below, not everything visible in the replay.
+
+### LC-3 debugging state
+
+Every recording includes each mouse's registers, program counter, and condition code. No additional flag is needed.
+
+Select a mouse in the viewer to see **LC-3 state** in the inspector. R0–R7, PC, and CC are stored as unsigned 16-bit numbers in the replay. The viewer displays them as four-digit hexadecimal words such as `x3000`. CC is `4` for negative (N), `2` for zero (Z), or `1` for positive (P), displayed as `x0004`, `x0002`, or `x0001`. No halted flag is recorded.
+
+Snapshots represent the end of that mouse's execution for the tick, before its next reset. Tick 0 shows the initialized VM; dead mice retain their last execution state. The PC is the VM's current program counter, not necessarily the address of the instruction that ended execution.
+
+Older replays still work; the inspector indicates when VM state was not recorded.
 
 ### Build a standalone executable
 
@@ -382,7 +392,7 @@ Declarations can appear in any order. Blank lines and comments beginning with `#
 ## Command reference
 
 ```text
-lc3bc run <map_path> <team1_path> <team2_path> [--replay <new_file.jsonl>]
+lc3bc run <map_path> <team1_path> <team2_path> [--replay <file.jsonl>]
 lc3bc help
 ```
 

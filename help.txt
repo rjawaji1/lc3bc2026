@@ -1,5 +1,5 @@
 Usage:
-	app run <map_path> <team1_path> <team2_path> [--replay <new_file.jsonl>]
+	app run <map_path> <team1_path> <team2_path> [--replay <file.jsonl>]
 	app help
 
 Commands:

@@ -88,19 +88,26 @@ main :: proc() {
 		command_print_help()
 
 	case "run":
-		if len(args) != 4 && len(args) != 6 {
-			fmt.eprintln("Error: run requires 3 file paths and optionally --replay <path>")
+		if len(args) < 4 {
+			fmt.eprintln("Error: run requires 3 file paths")
 			command_print_help()
 			os.exit(2)
 		}
-		
+
 		replay_path := ""
-		if len(args) == 6 {
-			if args[4] != "--replay" || args[5] == "" {
-				fmt.eprintln("Error: expected --replay <path> after the three input paths")
+		for i := 4; i < len(args); i += 1 {
+			switch args[i] {
+			case "--replay":
+				if replay_path != "" || i + 1 >= len(args) || args[i + 1] == "" || args[i + 1] == "--replay" {
+					fmt.eprintln("Error: expected one --replay <path>")
+					os.exit(2)
+				}
+				i += 1
+				replay_path = args[i]
+			case:
+				fmt.eprintf("Error: unknown run option: %s\n", args[i])
 				os.exit(2)
 			}
-			replay_path = args[5]
 		}
 		if !command_run(args[1], args[2], args[3], replay_path) {
 			os.exit(1)

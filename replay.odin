@@ -10,9 +10,16 @@ Replay_Header :: struct {
 	version: int,
 	width, height: int,
 	max_ticks: int,
+	vm_snapshots: bool,
 	map_name: string,
 	team_names: [2]string,
 	tiles: [ARENA_WIDTH * ARENA_HEIGHT]u8,
+}
+
+Replay_VM :: struct {
+	registers: [8]u16,
+	pc:        u16,
+	cc:        u16,
 }
 
 Replay_Mouse :: struct {
@@ -22,6 +29,7 @@ Replay_Mouse :: struct {
 	facing: Direction,
 	alive, has_cheese: bool,
 	fault: Mouse_Error,
+	vm: Replay_VM,
 }
 
 Replay_Spawner :: struct {
@@ -86,6 +94,7 @@ replay_write_header :: proc(file: ^os.File, game: ^Game, map_name, team1_name, t
 		width = ARENA_WIDTH,
 		height = ARENA_HEIGHT,
 		max_ticks = MAX_GAME_STEPS,
+		vm_snapshots = true,
 		map_name = replay_display_name(map_name),
 		team_names = {replay_display_name(team1_name), replay_display_name(team2_name)},
 	}
@@ -108,6 +117,11 @@ replay_capture_frame :: proc(game: ^Game) -> Replay_Frame {
 				x = mouse.pos.x, y = mouse.pos.y, facing = mouse.facing,
 				alive = mouse.state == .Alive, has_cheese = mouse.has_cheese,
 				fault = mouse.fault,
+				vm = Replay_VM{
+					registers = mouse.vm.registers,
+					pc        = mouse.vm.pc,
+					cc        = u16(mouse.vm.cc),
+				},
 			})
 		}
 	}

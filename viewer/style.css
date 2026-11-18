@@ -640,6 +640,16 @@ aside {
 	color: var(--muted);
 }
 
+.vm-inspection {
+	margin-top: 16px;
+	padding-top: 14px;
+	border-top: 1px solid var(--border);
+}
+
+.vm-inspection p {
+	margin-bottom: 10px;
+}
+
 .inspection dd {
 	margin: 0;
 	overflow-wrap: anywhere;

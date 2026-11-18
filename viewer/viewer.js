@@ -28,6 +28,7 @@
 		elapsed = 0,
 		loadId = 0;
 	const teamColor = (team) => (team === 1 ? colors.one : colors.two);
+	const hexWord = (value) => `x${value.toString(16).toUpperCase().padStart(4, '0')}`;
 	const basename = (name) => name.split(/[\\/]/).pop() || name;
 	const current = () => replay?.frames[at];
 	const previous = () => (at > 0 ? replay.frames[at - 1] : null);
@@ -61,8 +62,7 @@
 			notice(`Reading ${file.name}…`);
 			const source = await file.text();
 			if (id !== loadId) return;
-			const parsed = ReplayFormat.parseReplay(source);
-			replay = parsed;
+			replay = ReplayFormat.parseReplay(source);
 			at = 0;
 			selected = null;
 			$('timeline').max = replay.frames.length - 1;
@@ -322,6 +322,28 @@
 		const dl = element('dl');
 		for (const [key, value] of values) dl.append(element('dt', key), element('dd', String(value)));
 		container.append(dl);
+
+		const vm = element('section', undefined, 'vm-inspection');
+		vm.append(element('h3', 'LC-3 state'));
+		if (mouse.vm) {
+			const phase =
+				current().tick === 0
+					? 'Before first execution'
+					: mouse.alive
+						? 'End of execution'
+						: 'Last execution state';
+			vm.append(element('p', phase, 'mono'));
+			const registers = element('dl');
+			registers.append(element('dt', 'PC'), element('dd', hexWord(mouse.vm.pc)));
+			registers.append(element('dt', 'CC'), element('dd', hexWord(mouse.vm.cc)));
+			for (const [index, value] of mouse.vm.registers.entries()) {
+				registers.append(element('dt', `R${index}`), element('dd', hexWord(value)));
+			}
+			vm.append(registers);
+		} else {
+			vm.append(element('p', 'VM state was not recorded in this older replay.', 'muted'));
+		}
+		container.append(vm);
 	}
 
 	function renderRoster() {
