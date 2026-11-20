@@ -9,6 +9,7 @@ TRAP_VECTOR_MOVE   :: 0x30
 TRAP_VECTOR_ATTACK :: 0x31
 TRAP_VECTOR_SQUEAK :: 0x32
 TRAP_VECTOR_RANDOM :: 0x33
+TRAP_VECTOR_REG    :: 0x27
 
 VM_OBSERVATION      :: 0xE000
 VM_OBS_MOUSE_ID     :: VM_OBSERVATION + 0
@@ -117,6 +118,7 @@ mouse_init :: proc(mouse: ^Mouse, buffer: []u8) -> bool {
 	register_trap_attack(mouse)
 	register_trap_squeak(mouse)
 	register_trap_random(mouse)
+	register_trap_reg(mouse)
 	mouse_sync_observations(mouse)
 
 	return true
@@ -308,4 +310,67 @@ register_trap_random :: proc(mouse: ^Mouse){
 		mouse := (^Mouse)(user_data)
 		mouse.vm.registers[0x0] = u16(rand.uint32())
 	}
+}
+
+@(private = "file")
+register_trap_reg :: proc(mouse: ^Mouse) {
+	lc3.register_trap(&mouse.vm, TRAP_VECTOR_REG, trap_reg_callback, {})
+
+	trap_reg_callback :: proc(vm: ^lc3.LC3, _user_data: rawptr) {
+		fmt.println("+----------------------------------+")
+		fmt.println("|       hex      int    uint   chr |")
+		for i in 0 ..< 8 {
+			word := vm.registers[i]
+			fmt.printf("| r{}", i)
+			fmt.printf("  x{:04X}", word)
+			fmt.printf("  {:-7d}", (i16)(word))
+			fmt.printf("  {:-6d}", word)
+			fmt.printf("   {}", word_character_display(word))
+			fmt.println(" |")
+		}
+		fmt.println("+----------------+-----------------+")
+		fmt.printf("|    PC x{:04X}", vm.pc)
+		fmt.printf("    |   CC {}", condition_code_display(vm.cc))
+		fmt.println("   |")
+		fmt.println("+----------------+-----------------+")
+
+	}
+}
+
+@(private = "file")
+word_character_display :: proc(word: u16) -> string {
+	// odinfmt: disable
+	ascii := [0x80]string{
+		"NUL", "SOH", "STX",  "ETX", "EOT",  "ENQ", "ACK", "BEL",
+		" BS", " HT", " LF",  " VT", " FF",  " CR", " SO", " SI",
+		"DLE", "DC1", "DC2",  "DC3", "DC4",  "NAK", "SYN", "ETB",
+		"CAN", " EM", "SUB",  "ESC", " FS",  " GS", " RS", " US",
+		" SP", " ! ", " \" ", " # ", " $ ",  " % ", " & ", " ' ",
+		" ( ", " ) ", " * ",  " + ", " , ",  " - ", " . ", " / ",
+		" 0 ", " 1 ", " 2 ",  " 3 ", " 4 ",  " 5 ", " 6 ", " 7 ",
+		" 8 ", " 9 ", " : ",  " ; ", " < ",  " = ", " > ", " ? ",
+		" @ ", " A ", " B ",  " C ", " D ",  " E ", " F ", " G ",
+		" H ", " I ", " J ",  " K ", " L ",  " M ", " N ", " O ",
+		" P ", " Q ", " R ",  " S ", " T ",  " U ", " V ", " W ",
+		" X ", " Y ", " Z ",  " [ ", " \\ ", " ] ", " ^ ", " _ ",
+		" ` ", " a ", " b ",  " c ", " d ",  " e ", " f ", " g ",
+		" h ", " i ", " j ",  " k ", " l ",  " m ", " n ", " o ",
+		" p ", " q ", " r ",  " s ", " t ",  " u ", " v ", " w ",
+		" x ", " y ", " z ",  " { ", " | ",  " } ", " ~ ", "DEL",
+	};
+	// odinfmt: enable
+	return word > 0x7F ? "---" : ascii[word]
+}
+
+@(private = "file")
+condition_code_display :: proc(cc: lc3.Condition_Code) -> string {
+	switch cc {
+	case .N:
+		return "NEGATIVE"
+	case .Z:
+		return "  ZERO  "
+	case .P:
+		return "POSITIVE"
+	}
+	unreachable()
 }
